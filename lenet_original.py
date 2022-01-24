@@ -138,8 +138,8 @@ train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=100
 np.random.seed(0)
 perm_inds = list(range(28*28))
 np.random.shuffle(perm_inds)
-fig = plt.figure(2, figsize=(15, 6))
-fig.suptitle('Correctly-classified Figures', fontsize=16)
+#fig = plt.figure(2, figsize=(15, 6))
+#fig.suptitle('Correctly-classified Figures', fontsize=16)
 
 import time
 start = time.time()
@@ -147,11 +147,10 @@ for epoch in range(10) :
     print("{}th epoch starting.".format(epoch))
     for images, labels in train_loader :
         images, labels = images.to(device), labels.to(device)
-        plt.imshow(images[0].cpu().reshape(28,28), cmap = 'gray')
+        plt.imsave('tmp1.png', images[0].cpu().reshape(28,28), cmap = 'gray')
         images = images.reshape(images.shape[0], -1)
         images = images[:, perm_inds].reshape(images.shape[0], 1, 28, 28)
-        plt.imshow(images[0].cpu().reshape(28,28), cmap = 'gray')
-        plt.savefig('tmp.png')
+        plt.imsave('tmp2.png',images[0].cpu().reshape(28,28), cmap = 'gray')
         print(0/0)
         optimizer.zero_grad()
         train_loss = loss_function(model(images), labels)
