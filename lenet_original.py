@@ -6,22 +6,8 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.transforms import transforms
+import time
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-'''
-Step 1:
-'''
-
-# MNIST dataset
-train_dataset = datasets.MNIST(root='./mnist_data/',
-                               train=True, 
-                               transform=transforms.ToTensor(),
-                               download=True)
-
-test_dataset = datasets.MNIST(root='./mnist_data/',
-                              train=False, 
-                              transform=transforms.ToTensor())
 
 
 '''
@@ -88,8 +74,7 @@ class LeNet(nn.Module) :
                 nn.Tanh()
                 )
         self.C3_layer = nn.Sequential(
-                C3_layer_full(),
-                #C3_layer(),
+                nn.Conv2d(6, 16, kernel_size=5),
                 nn.Tanh()
                 )
         self.P4_layer = nn.Sequential(
@@ -122,65 +107,82 @@ class LeNet(nn.Module) :
 '''
 Step 3
 '''
-model = LeNet().to(device)
-loss_function = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-1)
 
-# print total number of trainable parameters
-param_ct = sum([p.numel() for p in model.parameters()])
-print(f"Total number of trainable parameters: {param_ct}")
+def main():
+        np.random.seed(0)
+        torch.manual_seed(0)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-'''
-Step 4
-'''
-train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=100, shuffle=True)
+        '''
+        Step 1:
+        '''
 
-np.random.seed(0)
-perm_inds = list(range(28*28))
-np.random.shuffle(perm_inds)
-#fig = plt.figure(2, figsize=(15, 6))
-#fig.suptitle('Correctly-classified Figures', fontsize=16)
+        # MNIST dataset
+        train_dataset = datasets.MNIST(root='./mnist_data/',
+                                train=True, 
+                                transform=transforms.ToTensor(),
+                                download=True)
 
-import time
-start = time.time()
-for epoch in range(10) :
-    print("{}th epoch starting.".format(epoch))
-    for images, labels in train_loader :
-        images, labels = images.to(device), labels.to(device)
-        plt.imsave('tmp1.png', images[0].cpu().reshape(28,28), cmap = 'gray')
-        images = images.reshape(images.shape[0], -1)
-        images = images[:, perm_inds].reshape(images.shape[0], 1, 28, 28)
-        plt.imsave('tmp2.png',images[0].cpu().reshape(28,28), cmap = 'gray')
-        print(0/0)
-        optimizer.zero_grad()
-        train_loss = loss_function(model(images), labels)
-        train_loss.backward()
+        test_dataset = datasets.MNIST(root='./mnist_data/',
+                                train=False, 
+                                transform=transforms.ToTensor())
 
-        optimizer.step()
-end = time.time()
-print("Time ellapsed in training is: {}".format(end - start))
+        model = LeNet().to(device)
+        loss_function = torch.nn.CrossEntropyLoss()
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-1)
 
-#torch.save(model.state_dict(), './trained_model/"
+        # print total number of trainable parameters
+        param_ct = sum([p.numel() for p in model.parameters()])
+        print(f"Total number of trainable parameters: {param_ct}")
 
-'''
-Step 5
-'''
-test_loss, correct, total = 0, 0, 0
+        '''
+        Step 4
+        '''
+        train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=100, shuffle=True)
 
-test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=100, shuffle=False)
+        perm_inds = list(range(28*28))
+        np.random.shuffle(perm_inds)
 
-for images, labels in test_loader :
-    images, labels = images.to(device), labels.to(device)
+        start = time.time()
+        for epoch in range(10) :
+                print("{}th epoch starting.".format(epoch))
+                for images, labels in train_loader :
+                        images, labels = images.to(device), labels.to(device)
+                        # plt.imsave('tmp1.png', images[0].cpu().reshape(28,28), cmap = 'gray')
+                        # images = images.reshape(images.shape[0], -1)
+                        # images = images[:, perm_inds].reshape(images.shape[0], 1, 28, 28)
+                        # plt.imsave('tmp2.png',images[0].cpu().reshape(28,28), cmap = 'gray')
+                        optimizer.zero_grad()
+                        train_loss = loss_function(model(images), labels)
+                        train_loss.backward()
 
-    output = model(images)
-    test_loss += loss_function(output, labels).item()
+                        optimizer.step()
+        end = time.time()
+        print("Time ellapsed in training is: {}".format(end - start))
 
-    pred = output.max(1, keepdim=True)[1]
-    correct += pred.eq(labels.view_as(pred)).sum().item()
-    
-    total += labels.size(0)
-            
-print('[Test set] Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss /total, correct, total,
-        100. * correct / total))
+        torch.save(model.state_dict(), './trained_model/lenet_mnist.pt')
 
+        '''
+        Step 5
+        '''
+        test_loss, correct, total = 0, 0, 0
+
+        test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=100, shuffle=False)
+
+        for images, labels in test_loader :
+                images, labels = images.to(device), labels.to(device)
+                #     images = images.reshape(images.shape[0], -1)
+                #     images = images[:, perm_inds].reshape(images.shape[0], 1, 28, 28)
+                output = model(images)
+                test_loss += loss_function(output, labels).item()
+
+                pred = output.max(1, keepdim=True)[1]
+                correct += pred.eq(labels.view_as(pred)).sum().item()
+                
+                total += labels.size(0)
+                
+        print('[Test set] Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
+                test_loss /total, correct, total,
+                100. * correct / total))
+if __name__ == '__main__':
+        main()
